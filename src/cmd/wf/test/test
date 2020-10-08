@@ -1,0 +1,12 @@
+#!/bin/rc
+
+rfork e
+
+opt=(-x w html)
+
+for(f in *.data)
+	if(! cmp -s <{wf $opt $f} <{../8.out $opt $f}){
+		a='<{' ^ (wf ../8.out) ^ ' '$"opt' '$f ^ '}'
+		echo diff $a
+	}
+exit ''

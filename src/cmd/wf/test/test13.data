@@ -1,0 +1,26 @@
+.nav
+{
+	=sage
+		=[age|a]
+		=fusianasan
+}
+
+.footer
+{
+	=age
+	test
+}
+
+.header
+{
+	=comp
+}
+.aside
+sidebar
+
+=a
+	.aside
+	{
+		=b
+	}
+	=c

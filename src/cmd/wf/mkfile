@@ -1,0 +1,19 @@
+</$objtype/mkfile
+
+TARG=wf
+CFILES=\
+	lex.c\
+	tree.c\
+	wf.c\
+	y.tab.c\
+
+OFILES=${CFILES:%.c=%.$O}
+
+HFILES=\
+	wf.h\
+	y.tab.h\
+
+YFILES=parse.y
+
+BIN=$home/bin/$objtype
+</sys/src/cmd/mkone

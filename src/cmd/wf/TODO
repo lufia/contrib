@@ -1,0 +1,11 @@
+warning and error
+*dt and dd must pair
+
+-deleted-
+	<del>deleted</del>
+
+#datetime#
+	<time>datetime</time>
+
+option -c
+	check urls

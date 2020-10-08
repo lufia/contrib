@@ -1,0 +1,11 @@
+%url s|^([a-z]+)\(([1-9])\)$|http://.../\2/\1|i
+%url s/9W:(test)/\/\1\//
+%url s/s p a/& z/
+
+s[man(1)]
+
+s[cm]
+
+s[a9W:tests]
+
+s[s p a]
