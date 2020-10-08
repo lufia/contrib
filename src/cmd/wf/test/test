@@ -3,10 +3,19 @@
 rfork e
 
 opt=(-x w html)
+if(~ $#PLAN9 0){
+	mkfile=/$cputype/mkfile
+	name=out
+}
+if not{
+	mkfile=$PLAN9/src/mkhdr
+	name=wf
+}
+o=`{sed -n '/^O=/s///p' $mkfile}
 
 for(f in *.data)
-	if(! cmp -s <{wf $opt $f} <{../8.out $opt $f}){
-		a='<{' ^ (wf ../8.out) ^ ' '$"opt' '$f ^ '}'
+	if(! cmp -s <{wf $opt $f} <{../$o.$name $opt $f}){
+		a='<{' ^ (wf ../$o.$name) ^ ' '$"opt' '$f ^ '}'
 		echo diff $a
 	}
 exit ''

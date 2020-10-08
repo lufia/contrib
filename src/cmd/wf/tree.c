@@ -122,7 +122,8 @@ static char *tab[] = {
 static void
 specialchars(Fmt *fmt, char *s)
 {
-	char c, *p;
+	int c;
+	char *p;
 
 	for(; p = strpbrk(s, "<>&\""); s = p+1){
 		c = *p;
@@ -209,19 +210,19 @@ genmeta(Head *h, int cont)
 }
 
 static void
-genscript(Head *h, int)
+genscript(Head *h, int cont)
 {
 	print("<script src=\"%T\"></script>\n", h->s);
 }
 
 static void
-genstyle(Head *h, int)
+genstyle(Head *h, int cont)
 {
 	print("<link rel=\"stylesheet\" type=\"text/css\" href=\"%T\">\n", h->s);
 }
 
 static void
-genfeed(Head *h, int)
+genfeed(Head *h, int cont)
 {
 	print("<link rel=\"alternate\" type=\"application/atom+xml\""
 		" title=\"Atom\" href=\"%T\">\n", h->s);

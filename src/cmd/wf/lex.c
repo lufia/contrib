@@ -1,7 +1,11 @@
 #include "wf.h"
 #include "y.tab.h"
 #include <bio.h>
+#ifdef PLAN9PORT
+#include <libString.h>
+#else
 #include <String.h>
+#endif
 #include <ctype.h>
 
 static struct {
@@ -130,7 +134,7 @@ static char *stab[] = {
 };
 
 static void
-setstate(int st)
+setlstate(int st)
 {
 	if(debug)
 		fprint(2, "%s -> %s\n", stab[state], stab[st]);
@@ -146,7 +150,7 @@ fail(int st)
 		;
 	if(c == '\n')
 		UNGETC(c);
-	setstate(st);
+	setlstate(st);
 	return Terror;
 }
 
@@ -290,7 +294,7 @@ genblock:
 		c = GETC();
 		if(c != '%'){
 			UNGETC(c);
-			setstate(Body0);
+			setlstate(Body0);
 			goto genblock;
 		}
 		r = readname(" \t");
@@ -301,7 +305,7 @@ genblock:
 		yylval.sym = s;
 		if(debug)
 			fprint(2, "Sym[%s] %s\n", ty(s->type), s->name);
-		setstate(Head1);
+		setlstate(Head1);
 		return s->type;
 
 	case Head1:			/* %type [string] */
@@ -311,21 +315,21 @@ genblock:
 		yylval.s = estrdup(s_to_c(sbuf));
 		if(debug)
 			fprint(2, "%s %q\n", ty(Tstring), yylval.s);
-		setstate(Head2);
+		setlstate(Head2);
 		return Tstring;
 
 	case Head2:
 		skip(" \t");
 		c = GETC();
 		assert(c == '\n' || c == Beof);
-		setstate(Head0);
+		setlstate(Head0);
 		return ';';
 
 	case Body0:			/* [indent] cmd inline */
 		c = GETC();
 		if(c == '%'){
 			UNGETC(c);
-			setstate(Head0);
+			setlstate(Head0);
 			goto genblock;
 		}
 		UNGETC(c);
@@ -340,7 +344,7 @@ genblock:
 		UNGETC(c);
 
 		nblock = r;
-		setstate(Body1);
+		setlstate(Body1);
 		goto genblock;
 
 	case Body1:			/* indent [cmd] inline */
@@ -359,39 +363,39 @@ genblock:
 		case '>':
 			if(debug)
 				fprint(2, "%c\n", c);
-			setstate(Body2);
+			setlstate(Body2);
 			return c;
 		case '!':
 			if(debug)
 				fprint(2, "%c\n", c);
-			setstate(Code);
+			setlstate(Code);
 			return c;
 		case '{':
 		case '}':
 			if(debug)
 				fprint(2, "%c\n", c);
-			setstate(Body3);
+			setlstate(Body3);
 			return c;
 		case '#':
 			if(debug)
 				fprint(2, "%c\n", c);
-			setstate(ID);
+			setlstate(ID);
 			return c;
 		case '.':
 			if(debug)
 				fprint(2, "%c\n", c);
-			setstate(Class);
+			setlstate(Class);
 			return c;
 		case '|':
 			if(debug)
 				fprint(2, "%c\n", c);
-			setstate(Table);
+			setlstate(Table);
 			return c;
 		default:
 			UNGETC(c);
 			if(debug)
 				fprint(2, "\\\n");
-			setstate(Body2);
+			setlstate(Body2);
 			return '\\';
 		}
 
@@ -409,7 +413,7 @@ genblock:
 			return fail(Body3);
 		case '\n':
 			UNGETC(c);
-			setstate(Body3);
+			setlstate(Body3);
 			break;
 		case '*':
 		case '[':
@@ -446,7 +450,7 @@ genblock:
 		c = GETC();
 		if(c != '\n')
 			return fail(Body3);
-		setstate(Body0);
+		setlstate(Body0);
 		return ';';
 
 	case Code:
@@ -456,7 +460,7 @@ genblock:
 				fprint(2, "%s\n", ty(Terror));
 			return fail(Body3);
 		}
-		setstate(Body3);
+		setlstate(Body3);
 		yylval.s = estrdup(s_to_c(sbuf));
 		if(debug)
 			fprint(2, "%s %q\n", ty(Tstring), yylval.s);
@@ -470,7 +474,7 @@ genblock:
 				fprint(2, "%s\n", ty(Terror));
 			return fail(Body3);
 		}
-		setstate(Body3);
+		setlstate(Body3);
 		yylval.s = estrdup(s_to_c(sbuf));
 		if(debug)
 			fprint(2, "%s %q\n", ty(Tstring), yylval.s);
