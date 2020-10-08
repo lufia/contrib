@@ -1,0 +1,30 @@
+%{
+#include "tcode.h"
+
+char fname[] = "dict.sample";
+%}
+%begin {
+	kbdinit();
+	dictinit(fname);
+}
+%try {
+	drycheck($3, "%C", getrune(*$1, *$2));
+}
+%%
+1	1	■
+1	t	ヅ
+2	q	哀
+5	w	伐
+b	b	毎
+1	6	■
+b	/	単
+1	/	還
+z	n	図
+z	0	綱
+b	0	皮
+j	f	◆
+j	l	成
+/	/	ズ
+a	-	■
++	A	■
+N	A	■

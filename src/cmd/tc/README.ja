@@ -1,0 +1,82 @@
+NAME
+	tc t-code tools
+
+SYNOPSIS
+	tc/tc
+
+	tc/look str
+
+	tc/owlll [-l lesson]
+
+	tc/import [file]
+
+	tc/export [file]
+
+DESCRIPTION
+	tc/tcはPlan9でのT-Code実装です。
+	標準入力を読み、Asciiモードではそのまま、
+	T-Codeモードの場合には日本語文字に変換して
+	標準出力へ書き出します。
+
+	実行直後はAsciiモードになっています。
+	Ctl-n(^n)でT-Codeモードに、Ctl-e(^e)でAsciiモードになります。
+	T-CodeからAsciiへ切り替えた場合に変換できない文字が残っていると、
+	それはそのまま書き出します。
+
+	tc/lookは、strのキーストロークを調べます。
+	だいたいは漢索板と同じだと思います。
+	赤いキーが最初、緑が2回目、青だと同じキーを2度押しです。
+	strは何文字でもかまいませんが、多くすればするほど、
+	それなりの画面の大きさが必要になります。
+	マウスの右ボタンを押すとメニューがでます。
+
+	tc/owlllはEELLLやDOGGGのような練習プログラムです。
+	画面構成は3つに分かれていて、右が練習中のLesson番号、
+	左の上段はストロークガイド、左の下段が練習テキストです。
+	マウスの右ボタンでメニューが出ます。
+
+	tc/import、tc/exportはテーブル変換プログラムです。
+	1行が""でくくられた40*40のテーブルを、tc/tcテーブルへと変換し、
+	また、tc/tcテーブルを40*40テーブルへと変換します。
+
+INSTALL
+	まずはプログラム類をコピーします。
+	% mkdir $home/bin/$objtype/tc
+	% mk all && mk install
+	% cd rc && mk install
+
+	次に、設定ファイル類をコピーします。
+	% mkdir $home/lib/tc
+	% cp tc.dict $home/lib/tc/dict
+
+	tc/owlllを使う場合には、tc2のソースからEELLLTXTをコピーします。
+	% hget http://openlab.jp/tcode/resources/soft/tc-2.3.1.tar.gz >tc2.tgz
+	% gunzip -c tc2.tgz | tar x
+	% tcs -fjis tc-2.3.1/etc/EELLLTXT >$home/lib/tc/owlll
+
+	最後に、以下のコードを$home/lib/profileにでも加えてください。
+	pipefile -r tc/tc /dev/cons
+	rio -i riostart </dev/cons
+
+FILES
+	設定ファイル類はすべて$home/lib/tc以下に置かれます。
+
+	dict	tc/tcなどで使うストローク表です。
+
+	owlll	tc/owlllの練習テキストです。
+
+SEE ALSO
+	http://openlab.jp/tcode/
+	http://t.pos.to/tc/
+
+BUGS
+	tc/tcは混ぜ書き変換、部首合成などは使えません。
+
+FIXED
+	[2004/10/29]
+	tc/owlll	全面的に書き換えました。
+	tc/look		新しいプログラムです。
+
+	[2004/10/21]
+	tc/import	キーを押す順番が逆になっていました。
+	tc/export	新しいプログラムです。

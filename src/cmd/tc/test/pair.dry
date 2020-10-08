@@ -1,0 +1,21 @@
+%{
+#include "tcode.h"
+%}
+%begin {
+	char fname[] = "dict.sample";
+
+	fmtinstall('P', pairfmt);
+	kbdinit();
+	dictinit(fname);
+}
+%try {
+	Rune c;
+
+	chartorune(&c, $1);
+	drycheck($2, "%P", c);
+}
+%%
+比	Left:row=3,col=4;Right:row=1,col=0
+の	Right:row=2,col=2;Left:row=2,col=2
+*	BAD
+■	BAD

@@ -1,0 +1,41 @@
+</$objtype/mkfile
+
+DRY=\
+	code\
+	dictinit\
+	pair\
+
+DIFF=\
+	getblk\
+
+TARG=$DRY $DIFF
+TESTS=${DRY:%=%.drytest} ${DIFF:%=%.difftest}
+
+OFILES=\
+	util.$O\
+	dict.$O\
+	kbd.$O\
+
+CFILES=${TARG:%=%.c} ${OFILES:%.$O=../%.c}
+HFILES=../tcode.h
+CFLAGS=-I.. -FVw
+
+OF=${OFILES:%.$O=%}
+OP=`{echo $OF | sed 's/ +/|/g; s/.*/(&).'$O'/'}
+
+BIN=$home/bin/$objtype
+</sys/src/cmd/mkmany
+
+%.c:D:	%.dry
+	dryad $prereq >$target
+
+$OP:R:	$HFILES
+	$CC $CFLAGS ../$stem1.c
+
+test:V:	$TESTS
+
+%.drytest:VQ:	$O.%
+	$O.$stem
+
+%.difftest:VQ:	$O.%
+	diff $stem.tst <{$O.$stem }

@@ -1,0 +1,19 @@
+</$objtype/mkfile
+
+TARG=\
+	tc\
+	look\
+	owlll\
+
+CFILES=\
+	util.c\
+	dict.c\
+	kbd.c\
+	pix.c\
+
+OFILES=${CFILES:%.c=%.$O}
+
+HFILES=tcode.h pix.h
+
+BIN=$home/bin/$objtype/tc
+</sys/src/cmd/mkmany

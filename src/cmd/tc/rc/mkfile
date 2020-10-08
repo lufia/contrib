@@ -1,0 +1,11 @@
+FILES=\
+	import\
+	export\
+
+BIN=$home/bin/$objtype/tc
+
+install:V: ${FILES:%=%.install}
+
+%.install:Pcmp -s $BIN/$stem:
+	cp $stem $BIN
+	chmod +x $BIN/$stem

@@ -1,0 +1,31 @@
+%{
+#include "tcode.h"
+%}
+%set FS ":"
+%begin {
+	fmtinstall('K', codefmt);
+	kbdinit();
+}
+%try {
+	char row, col, pos;
+
+	if(*$1 == 'L')
+		pos = Left;
+	else
+		pos = Right;
+	row = atoi($2);
+	col = atoi($3);
+	drycheck($4, "%K", code(pos, row, col));
+}
+%%
+L:0:0:1
+L:0:4:5
+R:0:0:6
+R:0:4:0
+L:1:0:q
+R:1:4:p
+L:2:0:a
+R:3:4:/
+L:0:1:2
+L:4:0:
+L:4:8:

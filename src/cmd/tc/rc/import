@@ -1,0 +1,95 @@
+#!/bin/rc
+
+cat $* |
+tr '0-9' '０-９' |
+tr '()%!?' '（）％！？' |
+tr -d ' "' |
+sed 's/...../& /g' |
+awk -v 'ROW=4' '
+# print blocks, it is sorted by 1st key
+# left[1..40] and right[1..40]
+{	for(i = 0; i < NF; i++)
+		if(i%2 == 0)
+			left[++nleft] = $(i+1)
+		else
+			right[++nright] = $(i+1)
+}
+END {
+	putblks(left, nleft)
+	putblks(right, nright)
+}
+function putblks(a, n,		i){
+	for(i = 1; i <= n; i++){
+		print a[i]
+		if(i%ROW == 0)
+			print ""
+	}
+}
+' |
+awk '
+# swap blocks
+# LL, LR, RL, RR
+BEGIN {
+	FS = "\n"
+	RS = ""
+	N = 40
+	COL = 5
+}
+NR%N == 1 { switch(kbd, 1) }
+NR%COL == 1 { switch(kbd, 2) }
+{	x = kbd[1] kbd[2]
+	tab[x,++nelem[x]] = $0
+}
+END {
+	split("LL LR RL RR", a, " ")
+	for(i = 1; a[i]; i++)
+		for(j = 1; j <= nelem[a[i]]; j++)
+			print tab[a[i],j] "\n"
+}
+function switch(a, i) {
+	if(a[i] == "L")
+		a[i] = "R"
+	else
+		a[i] = "L"
+}
+' |
+awk '
+# sort blocks for multi-column
+# LL[1.1-5.1], LL[1.2-5.2], ...
+BEGIN {
+	FS = "\n"
+	RS = ""
+	COL = 5
+}
+{	p = (NR-1)%COL + 1
+	for(i = 1; i <= NF; i++){
+		tab[p + (i-1)*COL] = $i
+		n++
+	}
+}
+NR%COL == 0 {
+	for(i = 1; i <= n; i += j){
+		for(j = 0; j < COL; j++){
+			if(j > 0)
+				printf("\t")
+			printf("%s", tab[i+j])
+		}
+		print ""
+	}
+	print ""
+	n = 0
+}
+' |
+awk '
+# set flags
+BEGIN {
+	RS = ""
+	ROW = 4
+	split("LL LR RL RR", a)
+}
+{	if(NR%ROW == 1)
+		printf(":%s\n", a[++p])
+	print
+	print ""
+}
+'

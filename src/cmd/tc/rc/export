@@ -1,0 +1,67 @@
+#!/bin/rc
+
+cat $* |
+tr '０-９' '0-9' |
+tr '（）％！？' '()%!?' |
+awk '
+# merge blocks and print
+# L1, R1, L2 ...
+BEGIN {
+	N = 40
+	array2(step, "L", "1 3 5 7 9")
+	array2(step, "R", "2 4 6 8 10")
+}
+/^[ \t]*$/ {
+	base[1] = 0
+	base[2] += 10
+	next
+}
+/^:/ {
+	base[2] = 0
+	s = substr($1, 2)
+	split(s, kbd, "")
+	next
+}
+{	for(i = 1; i <= NF; i++){
+		j = step[kbd[2],i] + base[2]
+		k = step[kbd[1],i] + base[1]
+		tab[j,k] = $i
+	}
+	base[1] += 10
+}
+END {
+	for(i = 1; i <= N; i++){
+		for(j = 1; j <= N; j++)
+			printf("%s", tab[i,j])
+		print ""
+	}
+}
+function array2(a, k1, s,		b,n,i) {
+	n = split(s, b)
+	for(i = 1; i <= n; i++)
+		a[k1,i] = b[i]
+}
+' |
+awk -v 'COL=5' '
+# sort by code table
+# L[1..5], R[1..5], L[6..10], ...
+NR%2 == 0 {
+	left[++nleft] = $0
+	if(nleft >= COL){
+		aprint(left, nleft)
+		nleft = 0
+	}
+}
+NR%2 == 1 {
+	right[++nright] = $0
+	if(nright >= COL){
+		aprint(right, nright)
+		nright = 0
+	}
+}
+function aprint(a, n,		i) {
+	for(i = 1; i <= n; i++)
+		print a[i]
+}
+' |
+sed 's/^/"/; s/$/"/; s/[0-9()%!?]/& /g'
