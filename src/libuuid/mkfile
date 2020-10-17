@@ -1,0 +1,20 @@
+</$objtype/mkfile
+
+LIB=/$objtype/lib/libuuid.a
+CFILES=\
+	uuid.c\
+
+HFILES=\
+	/sys/include/uuid.h\
+
+OFILES=${CFILES:%.c=%.$O}
+
+UPDATE=mkfile\
+	$LIB\
+	$HFILES\
+	$CFILES\
+
+</sys/src/cmd/mksyslib
+
+/sys/include/%.h: %.h
+	cp $prereq $target
