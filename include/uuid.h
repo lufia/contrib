@@ -1,3 +1,5 @@
+#pragma src "/sys/src/libuuid"
+#pragma lib "libuuid.a"
 #pragma varargck type "U" uchar*
 
 enum {
