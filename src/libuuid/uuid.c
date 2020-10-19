@@ -9,7 +9,7 @@ static int seq = -1;
 static Lock seqLock;
 
 static int
-random(uchar *p, int n)
+rdrandom(uchar *p, int n)
 {
 	int fd, rv;
 
@@ -45,14 +45,14 @@ uuidgen(uchar p[UUIDlen])
 
 	lock(&seqLock);
 	if(seq < 0){
-		if(random(buf, sizeof buf) < 0){
+		if(rdrandom(buf, sizeof buf) < 0){
 			unlock(&seqLock);
 			return -1;
 		}
-		seq = (buf[0]<<8 | buf[1]) & 0x3fff;
+		seq = (buf[0]<<8 | buf[1])&0x3fff | 0x8000; /* rfc4122 */
 	}
 	if(t <= last)
-		seq = (seq+1) & 0x3fff;
+		seq = (seq+1)&0x3fff | 0x8000; /* rfc4122 */
 	p = putb(p, seq, 2);
 	unlock(&seqLock);
 
@@ -62,7 +62,7 @@ uuidgen(uchar p[UUIDlen])
 	addr[sizeof(addr)-1] = '\0';
 	close(fd);
 	a = strtoll(addr, nil, 16);
-	putb(p, a, 48);
+	putb(p, a, 6);
 	return 0;
 }
 
@@ -71,11 +71,11 @@ uuidgenrand(uchar p[UUIDlen])
 {
 	int n;
 
-	n = random(p, UUIDlen);
+	n = rdrandom(p, UUIDlen);
 	if(n < 0)
 		return -1;
-	p[6] = (p[6]&0xf) | 0x40;  /* version: 4 */
-	p[8] = (p[8]&0x3f) | 0x80; /* variant: rfc4122 */
+	p[6] = (p[6]&0xf) | 0x40;  /* Version 4 */
+	p[8] = (p[8]&0x3f) | 0x80; /* rfc4122 */
 	return 0;
 }
 
@@ -87,7 +87,7 @@ encode(Fmt *fmt, uchar *p, int n, int delim)
 
 	c = 0;
 	for(ep = p+n; p < ep; p++){
-		r = fmtprint(fmt, "%hhux", *p);
+		r = fmtprint(fmt, "%02hhux", *p);
 		if(r < 0)
 			return -1;
 		c += r;

@@ -7,7 +7,7 @@ int (*gen)(uchar *p);
 static void
 usage(void)
 {
-	fprint(2, "usage: %s [-r]\n", argv0);
+	fprint(2, "usage: %s [-rt]\n", argv0);
 	exits("usage");
 }
 
@@ -16,11 +16,14 @@ main(int argc, char **argv)
 {
 	uchar uuid[UUIDlen];
 
-	gen = uuidgen;
+	gen = uuidgenrand;
 	fmtinstall('U', uuidfmt);
 	ARGBEGIN {
 	case 'r':
 		gen = uuidgenrand;
+		break;
+	case 't':
+		gen = uuidgen;
 		break;
 	default:
 		usage();
