@@ -237,17 +237,6 @@ dgen(void)
 		return;
 	print("<head>\n");
 	print("<meta charset=\"utf-8\">\n");
-	print("<script>\n");
-	print("document.createElement('article')\n");
-	print("document.createElement('aside')\n");
-	print("document.createElement('footer')\n");
-	print("document.createElement('header')\n");
-	print("document.createElement('nav')\n");
-	print("document.createElement('section')\n");
-	print("</script>\n");
-	print("<style>\n");
-	print("article, aside, footer, header, nav, section { display: block }\n");
-	print("</style>\n");
 
 	s = lookup("title");
 	if(s->bp){
