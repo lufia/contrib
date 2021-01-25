@@ -349,6 +349,11 @@ cgen(Node *n, int i, int h, int cflag)
 		print("%I</%s>\n", i, tag[n->op].s);
 		break;
 	case OCODE:
+		print("%I<%s><code%A>", i, tag[n->op].s, n->attr);
+		cgen(n->left, i+tag[n->op].i, h, cflag);
+		cgen(n->right, i+tag[n->op].i, h, cflag);
+		print("</code></%s>\n", tag[n->op].s);
+		break;
 	case ODD:
 	case ODT:
 	case OLI:
