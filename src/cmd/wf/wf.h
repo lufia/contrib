@@ -58,6 +58,7 @@ enum {
 	OLI,
 	OLINK,
 	OLIST,
+	OMAIN,
 	ONAV,
 	OOL,
 	OP,

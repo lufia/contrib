@@ -284,6 +284,7 @@ static struct {
 [OFOOTER]	{ "footer", 1 },
 [OHEADER]	{ "header", 1 },
 [OLI]		{ "li", 0 },
+[OMAIN]	{ "main", 1 },
 [ONAV]	{ "nav", 1 },
 [OOL]	{ "ol", 0 },
 [OP]		{ "p", 0 },
@@ -311,6 +312,7 @@ cgen(Node *n, int i, int h, int cflag)
 	case OASIDE:
 	case ODIV:
 	case ODL:
+	case OMAIN:
 	case ONAV:
 	case OOL:
 	case OTABLE:
@@ -512,6 +514,12 @@ static Node *
 elemental(Node *n)
 {
 	Attr *a;
+
+	a = pickattr(n->attr, ACLASS, "main");
+	if(a){
+		n->attr = removeattr(n->attr, a);
+		return cast(OMAIN, n);
+	}
 
 	a = pickattr(n->attr, ACLASS, "nav");
 	if(a){
