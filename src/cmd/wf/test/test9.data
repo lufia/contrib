@@ -6,3 +6,13 @@
 :f
 -g
 -h
+
+:single-dt
+-single-dd
+
+:dt-only
+
+-dd-only
+-dd-only
+-dd-only
+-dd-only

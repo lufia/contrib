@@ -92,6 +92,10 @@ new(int op, Node *left, Node *right)
 	n = malloc(sizeof *n);
 	if(n == nil)
 		sysfatal("malloc: %r");
+	if(left == nil){
+		left = right;
+		right = nil;
+	}
 	memset(n, 0, sizeof *n);
 	n->op = op;
 	n->left = left;
@@ -548,6 +552,46 @@ elemental(Node *n)
 	return n;
 }
 
+static int
+transdict(Node *n, Node **pp)
+{
+	/*
+	 * Initial n's layout example:
+	 *
+	 * DL
+	 * - LIST
+	 *   - LIST
+	 *     - LIST
+	 *       - DT
+	 *       - DD
+	 *     - DD
+	 *   - DT
+	 * - <nil>
+	 */
+	int d;
+	Node *p;
+
+	if(n == nil)
+		return -1;
+	if(n->op == ODD)
+		return 0;
+
+	d = transdict(n->left, pp);
+	if(d >= 0){
+		if(n->right && n->right->op == ODT){
+			p = new(ODIV, n->left, nil);
+			*pp = new(OLIST, *pp, p);
+			n->left = nil;
+			return -1;
+		}
+		return d + 1;
+	}
+	d = transdict(n->right, pp);
+	if(d < 0)
+		return -1;
+	return d + 1;
+}
+
 Node *
 complex(Node *n, Node *nn)
 {
@@ -560,6 +604,15 @@ complex(Node *n, Node *nn)
 	if(n->left && n->left->op == OSTRONG){
 		n->op = OTH;
 		n->left = n->left->left;
+	}
+
+	/* Groups continual DTs and DDs with a DIV. */
+	if(n->op == ODL){
+		p = nil;
+		transdict(n->left, &p);
+		if(n->left->left || n->left->right)
+			p = new(OLIST, p, new(ODIV, n->left, nil));
+		n->left = p;
 	}
 
 	if(n->op == OSECTIND || n->op == OARTICLE)
