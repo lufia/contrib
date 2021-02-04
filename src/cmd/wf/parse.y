@@ -48,7 +48,7 @@ body:
 	{
 		$$ = nil;
 		if($1)
-			$$ = new(OARTICLE, $1, nil);
+			$$ = new(OMAIN, $1, nil);
 	}
 
 article:

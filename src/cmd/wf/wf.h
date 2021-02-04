@@ -87,10 +87,10 @@ struct Node {
 	Attr *attr;
 	char *s;
 
-	Node *nav;
-	Node *head;
-	Node *foot;
 	Node *aside;
+	Node *foot;
+	Node *head;
+	Node *nav;
 };
 
 struct Head {
@@ -142,10 +142,13 @@ extern Attr *attr(int type);
 extern int htmlfmt(Fmt *fmt);
 extern int attrfmt(Fmt *fmt);
 extern int indentfmt(Fmt *fmt);
+extern void dumptree(Node *n, int i);
 extern void gen(Node *n);
 extern char *realname(char *url, char *ix, char *ex);
 extern char *expandurl(char *s);
-extern Node *complex(Node *n, Node *nn);
+extern Node *complex(Node *n);
+extern void simplify(Node *n);
+extern Node *reorder(Node *n, Node *nn);
 
 /*
  * wf.c

@@ -292,7 +292,7 @@ static struct {
 [ONAV]	{ "nav", 1 },
 [OOL]	{ "ol", 0 },
 [OP]		{ "p", 0 },
-[OQUOTE]		{ "blockquote", 0 },
+[OQUOTE]	{ "blockquote", 0 },
 [OSECTION]	{ "section", 1 },
 [OSTRONG]	{ "strong", 0 },
 [OTABLE]	{ "table", 0 },
@@ -300,7 +300,34 @@ static struct {
 [OTH]	{ "th", 0 },
 [OTR]	{ "tr", 0 },
 [OUL]	{ "ul", 0 },
+
+/* dump */
+[OLIST]	{ ":list", 0 },
+[OH]	{ ":h", 0 },
+[OSECTIND]	{ ":ind", 0 },
+[OTEXT]	{ ":text", 0 },
 };
+
+void
+dumptree(Node *n, int i)
+{
+	char *s, buf[10];
+
+	if(n == nil){
+		print("%I<nil>\n", i);
+		return;
+	}
+	s = tag[n->op].s;
+	if(s == nil){
+		snprint(buf, sizeof buf, "[tag=%d]", n->op);
+		s = buf;
+	}
+	print("%I<%s%A>\n", i, s, n->attr);
+	print("%ILeft:\n", i);
+	dumptree(n->left, i+1);
+	print("%IRight:\n", i);
+	dumptree(n->right, i+1);
+}
 
 static void
 cgen(Node *n, int i, int h, int cflag)
@@ -312,15 +339,14 @@ cgen(Node *n, int i, int h, int cflag)
 	cgen(n->nav, i, h, cflag);
 
 	switch(n->op){
+
+	/*
+	 * sectioning content
+	 */
 	case OARTICLE:
 	case OASIDE:
-	case ODIV:
-	case ODL:
 	case OMAIN:
 	case ONAV:
-	case OOL:
-	case OTABLE:
-	case OUL:
 		print("%I<%s%A>\n", i, tag[n->op].s, n->attr);
 		cgen(n->left, i+tag[n->op].i, h, cflag);
 		cgen(n->right, i+tag[n->op].i, h, cflag);
@@ -338,6 +364,10 @@ cgen(Node *n, int i, int h, int cflag)
 		cgen(n->left, i+tag[n->op].i, h+1, cflag);
 		cgen(n->right, i+tag[n->op].i, h+1, cflag);
 		break;
+
+	/*
+	 * flow content (block)
+	 */
 	case OFOOTER:
 		if((cflag&CFOOT) == 0)
 			fprint(2, "warning: footer element in prohibited block\n");
@@ -354,12 +384,17 @@ cgen(Node *n, int i, int h, int cflag)
 		cgen(n->right, i+tag[n->op].i, h, cflag&~(CSECTION|CHEAD|CFOOT));
 		print("%I</%s>\n", i, tag[n->op].s);
 		break;
-	case OCODE:
-		print("%I<%s><code%A>", i, tag[n->op].s, n->attr);
+	case ODIV:
+	case ODL:
+	case OOL:
+	case OTABLE:
+	case OUL:
+		print("%I<%s%A>\n", i, tag[n->op].s, n->attr);
 		cgen(n->left, i+tag[n->op].i, h, cflag);
 		cgen(n->right, i+tag[n->op].i, h, cflag);
-		print("</code></%s>\n", tag[n->op].s);
+		print("%I</%s>\n", i, tag[n->op].s);
 		break;
+
 	case ODD:
 	case ODT:
 	case OLI:
@@ -371,6 +406,18 @@ cgen(Node *n, int i, int h, int cflag)
 		cgen(n->right, i+tag[n->op].i, h, cflag);
 		print("</%s>\n", tag[n->op].s);
 		break;
+	case OTD:
+	case OTH:
+		print("<%s>", tag[n->op].s);
+		cgen(n->left, i+tag[n->op].i, h, cflag);
+		print("</%s>", tag[n->op].s);
+		break;
+	case OCODE:
+		print("%I<%s><code%A>", i, tag[n->op].s, n->attr);
+		cgen(n->left, i+tag[n->op].i, h, cflag);
+		cgen(n->right, i+tag[n->op].i, h, cflag);
+		print("</code></%s>\n", tag[n->op].s);
+		break;
 	case OH:
 		if((cflag&CH) == 0)
 			fprint(2, "warning: heading element in prohibited block\n");
@@ -378,17 +425,11 @@ cgen(Node *n, int i, int h, int cflag)
 		cgen(n->left, i, h, cflag);
 		print("</h%d>\n", h);
 		break;
-	case OLIST:
-		if(n->attr)
-			print("%I<div%A>\n", i, n->attr);
-		cgen(n->left, i, h, cflag);
-		cgen(n->right, i, h, cflag);
-		if(n->attr)
-			print("%I</div>\n", i);
-		break;
+
+	/*
+	 * flow content (inline)
+	 */
 	case OSTRONG:
-	case OTD:
-	case OTH:
 		print("<%s>", tag[n->op].s);
 		cgen(n->left, i+tag[n->op].i, h, cflag);
 		print("</%s>", tag[n->op].s);
@@ -406,6 +447,15 @@ cgen(Node *n, int i, int h, int cflag)
 			print("\"");
 		}
 		print(">");
+		break;
+
+	case OLIST:
+		if(n->attr)
+			print("%I<div%A>\n", i, n->attr);
+		cgen(n->left, i, h, cflag);
+		cgen(n->right, i, h, cflag);
+		if(n->attr)
+			print("%I</div>\n", i);
 		break;
 	case OTEXT:
 		print("%T", n->s);
@@ -514,42 +564,42 @@ cast(int op, Node *n)
 	return n;
 }
 
+static struct {
+	char *name;
+	int type;
+} ctab[] = {
+	{ "article", OARTICLE },
+	{ "aside", OASIDE },
+	{ "footer", OFOOTER },
+	{ "header", OHEADER },
+	{ "nav", ONAV },
+};
+
 static Node *
 elemental(Node *n)
 {
+	int i;
 	Attr *a;
 
-	a = pickattr(n->attr, ACLASS, "main");
-	if(a){
-		n->attr = removeattr(n->attr, a);
-		return cast(OMAIN, n);
+	for(i = 0; i < nelem(ctab); i++){
+		a = pickattr(n->attr, ACLASS, ctab[i].name);
+		if(a){
+			n->attr = removeattr(n->attr, a);
+			return cast(ctab[i].type, n);
+		}
 	}
-
-	a = pickattr(n->attr, ACLASS, "nav");
-	if(a){
-		n->attr = removeattr(n->attr, a);
-		return cast(ONAV, n);
-	}
-
-	a = pickattr(n->attr, ACLASS, "footer");
-	if(a){
-		n->attr = removeattr(n->attr, a);
-		return cast(OFOOTER, n);
-	}
-
-	a = pickattr(n->attr, ACLASS, "header");
-	if(a){
-		n->attr = removeattr(n->attr, a);
-		return cast(OHEADER, n);
-	}
-
-	a = pickattr(n->attr, ACLASS, "aside");
-	if(a){
-		n->attr = removeattr(n->attr, a);
-		return cast(OASIDE, n);
-	}
-
 	return n;
+}
+
+static int
+issect(int op)
+{
+	int i;
+
+	for(i = 0; i < nelem(ctab); i++)
+		if(ctab[i].type == op)
+			return 1;
+	return 0;
 }
 
 static int
@@ -593,7 +643,7 @@ transdict(Node *n, Node **pp)
 }
 
 Node *
-complex(Node *n, Node *nn)
+complex(Node *n)
 {
 	Node *p;
 
@@ -615,25 +665,71 @@ complex(Node *n, Node *nn)
 		n->left = p;
 	}
 
-	if(n->op == OSECTIND || n->op == OARTICLE)
-		nn = n;
-	n->left = complex(n->left, nn);
-	n->right = complex(n->right, nn);
-	p = elemental(n);
-	switch(p->op){
-	case ONAV:
-		nn->nav = new(OLIST, nn->nav, p);
+	n->left = complex(n->left);
+	n->right = complex(n->right);
+	return elemental(n);
+}
+
+static int
+iselem(Node *n, int op)
+{
+	if(n == nil)
+		return 0;
+	return n->op == op;
+}
+
+static int
+issingle(Node *n, int op)
+{
+	if(iselem(n, OLIST))
+	if(iselem(n->left, op))
+	if(n->right == nil)
+		return 1;
+	return 0;
+}
+
+void
+simplify(Node *n)
+{
+	Node *p;
+
+	if(n == nil)
+		return;
+	if(n->op == OMAIN || issect(n->op))
+	if(issingle(n->left, OSECTION))
+	if(n->right == nil){
+		p = n->left->left;
+		n->left->left = p->left;
+		n->left->right = p->right;
+		free(p);
+	}
+	simplify(n->left);
+	simplify(n->right);
+}
+
+Node *
+reorder(Node *n, Node *nn)
+{
+	if(n == nil)
 		return nil;
-	case OHEADER:
-		nn->head = new(OLIST, nn->head, p);
+	if(n->op == OSECTIND || n->op == OMAIN)
+		nn = n;
+	n->left = reorder(n->left, nn);
+	n->right = reorder(n->right, nn);
+	switch(n->op){
+	case OASIDE:
+		nn->aside = new(OLIST, nn->aside, n);
 		return nil;
 	case OFOOTER:
-		nn->foot = new(OLIST, nn->foot, p);
+		nn->foot = new(OLIST, nn->foot, n);
 		return nil;
-	case OASIDE:
-		nn->aside = new(OLIST, nn->aside, p);
+	case OHEADER:
+		nn->head = new(OLIST, nn->head, n);
+		return nil;
+	case ONAV:
+		nn->nav = new(OLIST, nn->nav, n);
 		return nil;
 	default:
-		return p;
+		return n;
 	}
 }
