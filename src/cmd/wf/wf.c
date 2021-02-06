@@ -58,11 +58,17 @@ main(int argc, char *argv[])
 	yyparse();
 	if(nerrors > 0)
 		exits("parse");
-	if(debug)
+	if(debug){
 		dumptree(root, 0);
-	root = complex(root);
-	simplify(root);
+		print("---\n");
+	}
+	root = complex(root, 1);
 	root = reorder(root, root);
+	if(debug){
+		dumptree(root, 0);
+		print("---\n");
+	}
+	simplify(root);
 	gen(root);
 	exits(nil);
 }

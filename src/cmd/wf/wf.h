@@ -91,6 +91,7 @@ struct Node {
 	Node *foot;
 	Node *head;
 	Node *nav;
+	int h;
 };
 
 struct Head {
@@ -146,7 +147,7 @@ extern void dumptree(Node *n, int i);
 extern void gen(Node *n);
 extern char *realname(char *url, char *ix, char *ex);
 extern char *expandurl(char *s);
-extern Node *complex(Node *n);
+extern Node *complex(Node *n, int h);
 extern void simplify(Node *n);
 extern Node *reorder(Node *n, Node *nn);
 
