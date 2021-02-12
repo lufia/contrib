@@ -50,6 +50,7 @@ enum {
 	ODIV,
 	ODL,
 	ODT,
+	OEM,
 	OFOOTER,
 	OH,
 	OHEADER,

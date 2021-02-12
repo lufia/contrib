@@ -1,4 +1,5 @@
 *x[*a*|b.html]x
+*x[`a`|b.html]x
 x[ab]x
 x[cx.w]
 x<ab.w>
@@ -13,3 +14,4 @@ z[
 >y
 
 m*a*p
+m`a`p

@@ -296,9 +296,11 @@ static struct {
 [ODIV]	{ "div", 1 },
 [ODL]	{ "dl", 0 },
 [ODT]	{ "dt", 0 },
+[OEM]	{ "em", 0 },
 [OFOOTER]	{ "footer", 1 },
 [OHEADER]	{ "header", 1 },
 [OLI]		{ "li", 0 },
+[OLINK]	{ "a", 0 },
 [OMAIN]	{ "main", 1 },
 [ONAV]	{ "nav", 1 },
 [OOL]	{ "ol", 0 },
@@ -316,7 +318,6 @@ static struct {
 [OLIST]	{ ":list", 0 },
 [OH]	{ "h", 0 },
 [OSECTIND]	{ ":ind", 0 },
-[OLINK]	{ "a", 0 },
 [OTEXT]	{ ":text", 0 },
 };
 
@@ -459,10 +460,15 @@ cgen(Node *n, int i, int cflag)
 		cgen(n->left, i+tag[n->op].i, cflag);
 		print("</%s>", tag[n->op].s);
 		break;
+	case OEM:
+		print("<%s>", tag[n->op].s);
+		cgen(n->left, i+tag[n->op].i, cflag);
+		print("</%s>", tag[n->op].s);
+		break;
 	case OLINK:
-		print("<a href=\"%T\">", n->s);
+		print("<%s href=\"%T\">", tag[n->op].s, n->s);
 		cgen(n->left, i, cflag);
-		print("</a>");
+		print("</%s>", tag[n->op].s);
 		break;
 	case OIMG:
 		print("<img src=\"%T\"", n->s);

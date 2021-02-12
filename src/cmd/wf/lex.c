@@ -405,7 +405,7 @@ genblock:
 		if(state == Table && r > 0)
 			return ',';
 
-		switch(c = getcc(&c1, "*[]|<>")){
+		switch(c = getcc(&c1, "*`[]|<>")){
 		case Beof:
 			yyerror("eof in body");
 			if(debug)
@@ -416,6 +416,7 @@ genblock:
 			setlstate(Body3);
 			break;
 		case '*':
+		case '`':
 		case '[':
 		case ']':
 		case '|':
@@ -429,7 +430,7 @@ genblock:
 		default:
 			s_reset(sbuf);
 			s_putc(sbuf, c1);
-			while((c=getcc(&c1, "*[]|<>")) == 0){
+			while((c=getcc(&c1, "*`[]|<>")) == 0){
 				if(state == Table && c1 == '\t'){
 					UNGETC(c);
 					break;

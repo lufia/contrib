@@ -285,6 +285,10 @@ token:
 	{
 		$$ = new(OSTRONG, $2, nil);
 	}
+|	'`' nestable '`'
+	{
+		$$ = new(OEM, $2, nil);
+	}
 |	link
 |	text
 
