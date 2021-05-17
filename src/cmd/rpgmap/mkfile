@@ -1,0 +1,19 @@
+</$objtype/mkfile
+
+TARG=mapedit
+CFILES=\
+	lex.c\
+	gen.c\
+	draw.c\
+	y.tab.c\
+
+OFILES=${CFILES:%.c=%.$O}
+
+HFILES=\
+	rpgmap.h\
+	y.tab.h\
+
+YFILES=rpgmap.y
+
+BIN=$home/bin/$objtype/games
+</sys/src/cmd/mkone

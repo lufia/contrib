@@ -1,0 +1,158 @@
+#!/bin/rc
+
+rfork e
+
+# floor x y [title]
+# line x1 y1 x2 y2 pos	(x,y: 1 to N, pos: (top bot left right))
+# mark x y A1
+# fill x y [A1]
+# move x y direction		(direction: (up down left right))
+# oneway				not implement
+
+verbose=0
+
+while(~ $1 -*){
+	switch($1){
+	case -v
+		verbose=1
+	case -*
+		echo usage: games/map [-v] [file ...] >[1=2]
+		exit usage
+	}
+	shift
+}
+
+awk '
+BEGIN {
+	box = 1
+	central = box/2
+	verbose = '$verbose'
+	print ".po 0i"
+	print ".PS"
+	print "arrowht = 0.05"
+}
+/^[ \t]*#/ || /^[ \t]*$/ {
+	next
+}
+$1 == "title" {
+	next
+}
+$1 == "floor" && NF >= 3 {
+	width = $2
+	height = $3
+
+	if(verbose){
+		printf "for i = 0 to %d do {\n", height
+		fmt = sprintf("\tline from %s,%s to %s,%s dotted\n",
+			cm("%d"), cm("-i*%d"), cm("%d"), cm("-i*%d"))
+		printf fmt, 0, box, width*box, box
+		printf "\tif i < %d then {", height
+		fmt = sprintf("sprintf(\"%%%%.0f\", i+1) ljust at last line - %s,%s",
+			cm("%f"), cm("%f"))
+		printf fmt, central, central
+		print "}"
+		print "}"
+
+		printf "for i = 0 to %d do {\n", width
+		fmt = sprintf("\tline from %s,%s to %s,%s dotted\n",
+			cm("i*%d"), cm("%d"), cm("i*%d"), cm("%d"))
+		printf fmt, box, 0, box, -height*box
+		printf "\tif i < %d then {", width
+		fmt = sprintf("sprintf(\"%%%%.0f\", i+1) at last line + %s,%s",
+			cm("%f"), cm("%f"))
+		printf fmt, central, central
+		print "}"
+		print "}"
+	}
+
+	if(NF > 3){
+		$1 = $2 = $3 = ""
+		s = $0
+		sub(/^[ \t]+/, "", s)
+		fmt = sprintf("%%s rjust at %s,%s\n", cm("%f"), cm("%f"))
+		printf fmt, s, width*box, -height*box-central
+	}
+	next
+}
+$1 == "line" {
+	fmt = sprintf("line from %s,%s to %s,%s\n",
+		cm("%d"), cm("-%d"), cm("%d"), cm("-%d"))
+	for(i = 2; i <= NF && $i ~ /^[0-9]+$/; i++)
+		a[i-1] = $i
+	na = i-2
+	if(na == 2){
+		a[3] = a[1]
+		a[4] = a[2]
+		na = 4
+	}
+	if(na != 4)
+		illegal($0)
+	if(a[1] > a[3]){
+		t = a[1]
+		a[1] = a[3]
+		a[3] = t
+	}
+	if(a[2] > a[4]){
+		t = a[2]
+		a[2] = a[4]
+		a[4] = t
+	}
+	for(; i <= NF; i++)
+		if($i == "top")
+			printf fmt, (a[1]-1)*box,(a[2]-1)*box,a[3]*box,(a[4]-1)*box
+		else if($i == "bot")
+			printf fmt, (a[1]-1)*box, a[2]*box, a[3]*box, a[4]*box
+		else if($i == "left")
+			printf fmt, (a[1]-1)*box,(a[2]-1)*box,(a[3]-1)*box,a[4]*box
+		else if($i == "right")
+			printf fmt, a[1]*box, (a[2]-1)*box, a[3]*box, a[4]*box
+		else
+			illegal($0 " near " $i)
+	next
+}
+$1 == "mark" && NF == 4 {
+	fmt = sprintf("box \"%%s\" invis at %s,%s wid %s ht %s\n",
+		cm("%f"), cm("-%f"), cm("%d"), cm("-%d"))
+	printf fmt, $4, ($2-1)*box+central, ($3-1)*box+central, box, box
+	next
+}
+$1 == "fill" && (NF == 3 || NF == 4) {
+	fmt = sprintf("box \"%%s\" invis fill at %s,%s wid %s ht %s\n",
+		cm("%f"), cm("-%f"), cm("%d"), cm("-%d"))
+	printf fmt, $4, ($2-1)*box+central, ($3-1)*box+central, box, box
+	next
+}
+$1 == "move" {
+	fmt = sprintf("box invis at %s,%s wid %s ht %s\n",
+		cm("%f"), cm("-%f"), cm("%d/2"), cm("-%d/2"))
+	printf fmt, ($2-1)*box+central, ($3-1)*box+central, box, box
+}
+$1 == "move" && $4 == "up" {
+	print "arrow from last box.n to last box.s"	# Y is negative
+	next
+}
+$1 == "move" && $4 == "down" {
+	print "arrow from last box.s to last box.n"	# Y is negative
+	next
+}
+$1 == "move" && $4 == "left" {
+	print "arrow from last box.e to last box.w"
+	next
+}
+$1 == "move" && $4 == "right" {
+	print "arrow from last box.w to last box.e"
+	next
+}
+{	illegal($0)
+}
+END {
+	print ".PE"
+}
+function cm(s){
+	return "(" s ")/2.54/2"
+}
+function illegal(s){
+	printf "illegal line %s\n", s >"/fd/2"
+	exit(1)
+}
+' $* | pic | troff
