@@ -1,0 +1,141 @@
+#!/bin/rc
+
+rfork e
+
+# floor x y [title]
+# line x1 y1 x2 y2 pos	(x,y: 1 to N, pos: (top bot left right))
+# mark x y A1
+# fill x y [A1]
+# move x y direction		(direction: (up down left right))
+# oneway				not implement
+
+while(~ $1 -*){
+	switch($1){
+	case -*
+		echo usage: games/mapsvg [file ...] >[1=2]
+		exit usage
+	}
+	shift
+}
+
+awk '
+BEGIN {
+	box = 20
+	central = box/2
+	delta = 4
+}
+/^[ \t]*#/ || /^[ \t]*$/ {
+	next
+}
+$1 == "title" {
+	next
+}
+$1 == "floor" && NF >= 3 {
+	width = $2 * box
+	height = $3 * box
+	printf "<svg viewBox=\"0 0 %d %d\" xmlns=\"http://www.w3.org/2000/svg\">\n", width, height
+	print "<defs>"
+	printf "\t<marker id=\"arrow\" viewBox=\"0 0 10 10\" refX=\"5\" refY=\"5\""
+	printf " markerWidth=\"6\" markerHeight=\"6\""
+	print " orient=\"auto-start-reverse\">"
+	print "\t\t<path d=\"M 0 0 L 10 5 L 0 10 z\" />"
+	print "\t</marker>"
+	print "</defs>"
+
+	if(NF > 3){
+		$1 = $2 = $3 = ""
+		s = $0
+		sub(/^[ \t]+/, "", s)
+		printf "<text x=\"%d\" y=\"%d\" text-anchor=\"end\">", width, height
+		printf "%s", substr(s, 2, length(s)-2)
+		print "</text>"
+	}
+	next
+}
+$1 == "line" {
+	for(i = 2; i <= NF && $i ~ /^[0-9]+$/; i++)
+		a[i-1] = ($i-1) * box
+	na = i-2
+	if(na == 2){
+		a[3] = a[1]
+		a[4] = a[2]
+		na = 4
+	}
+	if(na != 4)
+		illegal($0)
+	if(a[1] > a[3]){
+		t = a[1]
+		a[1] = a[3]
+		a[3] = t
+	}
+	if(a[2] > a[4]){
+		t = a[2]
+		a[2] = a[4]
+		a[4] = t
+	}
+	fmt = "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"black\" />\n"
+	for(; i <= NF; i++)
+		if($i == "top")
+			printf fmt, a[1], a[2], a[3]+box, a[2]
+		else if($i == "bot")
+			printf fmt, a[1], a[4]+box, a[3]+box, a[4]+box
+		else if($i == "left")
+			printf fmt, a[1], a[2], a[1], a[4]+box
+		else if($i == "right")
+			printf fmt, a[1]+box, a[2], a[1]+box, a[4]+box
+		else
+			illegal($0 " near " $i)
+	next
+}
+$1 == "mark" && NF == 4 {
+	mx = ($2-1)*box
+	my = ($3-1)*box
+	printf "<text x=\"%d\" y=\"%d\"", mx+central, my+central
+	printf " text-anchor=\"middle\" dominant-baseline=\"central\">%s</text>\n", $4
+	next
+}
+$1 == "fill" && (NF == 3 || NF == 4) {
+	mx = ($2-1)*box
+	my = ($3-1)*box
+	print "<g>"
+	printf "\t<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"", mx, my, box, box
+	print " fill=\"#87cefa\" stroke=\"black\" />\n"
+	if($4 != ""){
+		printf "\t<text x=\"%d\" y=\"%d\"", mx+central, my+central
+		printf " text-anchor=\"middle\" dominant-baseline=\"central\">%s</text>\n", $4
+	}
+	print "</g>"
+	next
+}
+$1 == "move" && $4 ~ /^up|down|left|right$/ {
+	mx = ($2-1)*box
+	my = ($3-1)*box
+	if($4 == "up"){
+		printf "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\"",
+			mx+central, my+delta, mx+central, my+box-delta
+		print " stroke=\"black\" marker-start=\"url(#arrow)\" />"
+	}else if($4 == "down"){
+		printf "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\"",
+			mx+central, my+delta, mx+central, my+box-delta
+		print " stroke=\"black\" marker-end=\"url(#arrow)\" />"
+	}else if($4 == "left"){
+		printf "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\"",
+			mx+delta, my+central, mx+box-delta, my+central
+		print " stroke=\"black\" marker-start=\"url(#arrow)\" />"
+	}else if($4 == "right"){
+		printf "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\"",
+			mx+delta, my+central, mx+box-delta, my+central
+		print " stroke=\"black\" marker-end=\"url(#arrow)\" />"
+	}
+	next
+}
+{	illegal($0)
+}
+END {
+	print "</svg>"
+}
+function illegal(s){
+	printf "illegal line %s\n", s >"/fd/2"
+	exit(1)
+}
+' $*
