@@ -297,6 +297,9 @@ static struct {
 [ODL]	{ "dl", 0 },
 [ODT]	{ "dt", 0 },
 [OEM]	{ "em", 0 },
+[OFIGCAPTION]	{ "figcaption", 0 },
+[OFIGIMG]	{ "img", 0 },
+[OFIGURE]	{ "figure", 1 },
 [OFOOTER]	{ "footer", 1 },
 [OHEADER]	{ "header", 1 },
 [OLI]		{ "li", 0 },
@@ -412,6 +415,7 @@ cgen(Node *n, int i, int cflag)
 		break;
 	case ODIV:
 	case ODL:
+	case OFIGURE:
 	case OOL:
 	case OTABLE:
 	case OUL:
@@ -423,6 +427,7 @@ cgen(Node *n, int i, int cflag)
 
 	case ODD:
 	case ODT:
+	case OFIGCAPTION:
 	case OLI:
 	case OP:
 	case OQUOTE:
@@ -478,6 +483,15 @@ cgen(Node *n, int i, int cflag)
 			print("\"");
 		}
 		print(">");
+		break;
+	case OFIGIMG:
+		print("%I<img src=\"%T\"", i, n->s);
+		if(n->left){
+			print(" alt=\"");
+			cgen(n->left, i, cflag);
+			print("\"");
+		}
+		print(">\n");
 		break;
 
 	case OLIST:
@@ -694,6 +708,15 @@ complex(Node *n, int h)
 		if(n->left->left || n->left->right)
 			p = new(OLIST, p, new(ODIV, n->left, nil));
 		n->left = p;
+	}
+
+	if(n->op == OP)
+	if(n->left && n->left->op == OIMG)
+	if(n->right == nil){
+		n->op = OFIGURE;
+		n->left->op = OFIGIMG;
+		if(n->left->left)
+			n->right = new(OFIGCAPTION, n->left->left, nil);
 	}
 
 	if(n->op == OSECTIND)
