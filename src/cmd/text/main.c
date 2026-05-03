@@ -26,7 +26,7 @@ Menu m = {
 void
 usage(void)
 {
-	fprint(2, "usage: %s [-f font] [cmd [args...]]\n", argv0);
+	fprint(2, "usage: %s [-f font] [-l label] [cmd [args...]]\n", argv0);
 	threadexitsall("usage");
 }
 
@@ -178,11 +178,15 @@ threadmain(int argc, char *argv[])
 {
 	Rune r;
 	char *fontname = nil;
+	char *label = "text";
 	int i;
 
 	ARGBEGIN{
 	case 'f':
 		fontname = EARGF(usage());
+		break;
+	case 'l':
+		label = EARGF(usage());
 		break;
 	default:
 		usage();
@@ -190,7 +194,7 @@ threadmain(int argc, char *argv[])
 
 	cmdargv = argv;
 
-	if(initdraw(nil, nil, "text") < 0)
+	if(initdraw(nil, nil, label) < 0)
 		sysfatal("initdraw: %r");
 
 	if(fontname != nil){
