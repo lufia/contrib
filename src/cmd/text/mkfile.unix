@@ -1,0 +1,13 @@
+</$PLAN9/src/mkhdr
+egrep=grep -E
+
+TARG=text
+CFILES=\
+	main.c\
+
+OFILES=${CFILES:%.c=%.$O}
+
+HFILES=\
+	twit.h\
+
+<$PLAN9/src/mkone
