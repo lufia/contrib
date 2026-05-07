@@ -4,13 +4,39 @@
 #include <thread.h>
 #include <keyboard.h>
 #include <mouse.h>
+#include <frame.h>
 #include "lib.h"
+
+enum {
+	Margin = 4,
+	Padding = 4,
+	Border = 1,
+};
+
+/* Acme colors */
+enum {
+	C_TextBack = 0xFFFFEAFF,
+	C_TextSel  = 0xEEEE9EFF,
+	C_Border   = 0x8888CCFF,
+};
 
 Rune buf[Maxbuf];
 int nbuf;
 int icursor;
+
+Rune buf2[Maxbuf];
+int nbuf2;
+Rune buf3[Maxbuf];
+int nbuf3;
+
 Keyboardctl *kc;
 Mousectl *mc;
+
+Rectangle r1, r2, r3;
+Frame f1, f2, f3;
+Image *cols[NCOL];
+Image *acme_border;
+Image *acme_back;
 
 char **cmdargv;
 
@@ -24,117 +50,69 @@ Menu m = {
 };
 
 void
-usage(void)
+calculaterects(void)
 {
-	fprint(2, "usage: %s [-f font] [-l label] [cmd [args...]]\n", argv0);
-	threadexitsall("usage");
+	int h;
+	Rectangle r;
+
+	r = screen->r;
+	h = (r.max.y - r.min.y) / 3;
+
+	r1 = Rect(r.min.x, r.min.y, r.max.x, r.min.y + h);
+	r2 = Rect(r.min.x, r1.max.y, r.max.x, r1.max.y + h);
+	r3 = Rect(r.min.x, r2.max.y, r.max.x, r.max.y);
+
+	/* Apply margin */
+	r1 = insetrect(r1, Margin);
+	r2 = insetrect(r2, Margin);
+	r3 = insetrect(r3, Margin);
 }
 
-Point
-getpt(int index)
+void
+initframes(void)
 {
-	Point p, ep;
-	int i;
-	Rune rs[2];
-
-	p = screen->r.min;
-	rs[1] = 0;
-
-	for(i = 0; i < index; i++){
-		if(buf[i] == '\n'){
-			p.x = screen->r.min.x;
-			p.y += font->height;
-			continue;
-		}
-		rs[0] = buf[i];
-		ep = runestringsize(font, rs);
-		if(p.x + ep.x > screen->r.max.x){
-			p.x = screen->r.min.x;
-			p.y += font->height;
-		}
-		p.x += ep.x;
-	}
-	return p;
-}
-
-int
-pt2index(Point pt)
-{
-	Point p, ep;
-	int i, besti;
-	Rune rs[2];
-
-	p = screen->r.min;
-	rs[1] = 0;
-	besti = 0;
-
-	for(i = 0; i <= nbuf; i++){
-		if(pt.y >= p.y && pt.y < p.y + font->height){
-			if(pt.x < p.x + 2)
-				return i;
-			besti = i;
-		} else if(pt.y >= p.y + font->height){
-			besti = i;
-		}
-
-		if(i == nbuf) break;
-
-		if(buf[i] == '\n'){
-			if(pt.y >= p.y && pt.y < p.y + font->height)
-				return i;
-			p.x = screen->r.min.x;
-			p.y += font->height;
-			continue;
-		}
-		rs[0] = buf[i];
-		ep = runestringsize(font, rs);
-		if(p.x + ep.x > screen->r.max.x){
-			p.x = screen->r.min.x;
-			p.y += font->height;
-		}
-		p.x += ep.x;
-	}
-	return besti;
+	calculaterects();
+	frinit(&f1, insetrect(r1, Border + Padding), font, screen, cols);
+	frinit(&f2, insetrect(r2, Border + Padding), font, screen, cols);
+	frinit(&f3, insetrect(r3, Border + Padding), font, screen, cols);
 }
 
 void
 redraw(void)
 {
-	Point p, ep, curp;
-	int i;
-	Rune rs[2];
-
 	if(screen == nil)
 		return;
 
-	draw(screen, screen->r, display->white, nil, ZP);
-	p = screen->r.min;
-	curp = p;
-	rs[1] = 0;
+	draw(screen, screen->r, acme_back, nil, ZP);
 
-	for(i = 0; i < nbuf; i++){
-		if(i == icursor)
-			curp = p;
+	/* Draw borders */
+	border(screen, r1, Border, acme_border, ZP);
+	border(screen, r2, Border, acme_border, ZP);
+	border(screen, r3, Border, acme_border, ZP);
 
-		if(buf[i] == '\n'){
-			p.x = screen->r.min.x;
-			p.y += font->height;
-			continue;
-		}
-		rs[0] = buf[i];
-		ep = runestringsize(font, rs);
-		if(p.x + ep.x > screen->r.max.x){
-			p.x = screen->r.min.x;
-			p.y += font->height;
-		}
-		runestring(screen, p, display->black, ZP, font, rs);
-		p.x += ep.x;
-	}
-	if(i == icursor)
-		curp = p;
+	/* r1: editor */
+	frdelete(&f1, 0, f1.nchars);
+	frinsert(&f1, buf, buf + nbuf, 0);
+	frdrawsel(&f1, frptofchar(&f1, icursor), icursor, icursor, 1);
 
-	draw(screen, Rect(curp.x, curp.y, curp.x+2, curp.y+font->height), display->black, nil, ZP);
+	/* r2: history 1 */
+	frdelete(&f2, 0, f2.nchars);
+	if(nbuf2 > 0)
+		frinsert(&f2, buf2, buf2 + nbuf2, 0);
+
+	/* r3: history 2 */
+	frdelete(&f3, 0, f3.nchars);
+	if(nbuf3 > 0)
+		frinsert(&f3, buf3, buf3 + nbuf3, 0);
+
 	flushimage(display, 1);
+}
+
+void
+usage(void)
+{
+	fprint(2, "usage: %s [-f font] [-l label] [cmd [args...]]\n", argv0);
+	threadexitsall("usage");
 }
 
 void
@@ -145,6 +123,12 @@ output(void)
 
 	if(nbuf == 0)
 		return;
+
+	/* shift history */
+	memmove(buf3, buf2, nbuf2 * sizeof(Rune));
+	nbuf3 = nbuf2;
+	memmove(buf2, buf, nbuf * sizeof(Rune));
+	nbuf2 = nbuf;
 
 	if(cmdargv == nil || *cmdargv == nil){
 		print("%.*S", nbuf, buf);
@@ -204,11 +188,21 @@ threadmain(int argc, char *argv[])
 		font = f;
 	}
 
+	acme_back = allocimage(display, Rect(0,0,1,1), screen->chan, 1, C_TextBack);
+	acme_border = allocimage(display, Rect(0,0,1,1), screen->chan, 1, C_Border);
+
+	cols[BACK] = acme_back;
+	cols[HIGH] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, C_TextSel);
+	cols[BORD] = display->black;
+	cols[TEXT] = display->black;
+	cols[HTEXT] = display->black;
+
 	if((kc = initkeyboard(nil)) == nil)
 		sysfatal("initkeyboard: %r");
 	if((mc = initmouse(nil, screen)) == nil)
 		sysfatal("initmouse: %r");
 
+	initframes();
 	redraw();
 
 	enum { AMOUSE, AKBD, ARESIZE, NALT };
@@ -230,8 +224,10 @@ threadmain(int argc, char *argv[])
 		switch(rev){
 		case AMOUSE:
 			if(mc->m.buttons & 1){
-				icursor = pt2index(mc->m.xy);
-				redraw();
+				if(ptinrect(mc->m.xy, r1)){
+					icursor = frcharofpt(&f1, mc->m.xy);
+					redraw();
+				}
 			}else if(mc->m.buttons & 4){
 				if(menuhit(3, mc, &m, nil) == 0)
 					goto out;
@@ -304,6 +300,7 @@ threadmain(int argc, char *argv[])
 		case ARESIZE:
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("getwindow: %r");
+			initframes();
 			redraw();
 			break;
 		}
