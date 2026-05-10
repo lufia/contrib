@@ -11,6 +11,7 @@ enum {
 	Margin = 4,
 	Padding = 4,
 	Border = 1,
+	MaxHistory = 10,
 };
 
 /* Acme colors */
@@ -20,20 +21,24 @@ enum {
 	C_Border   = 0x8888CCFF,
 };
 
+typedef struct History History;
+struct History {
+	Rune buf[Maxbuf];
+	int n;
+};
+
 Rune buf[Maxbuf];
 int nbuf;
 int icursor;
 
-Rune buf2[Maxbuf];
-int nbuf2;
-Rune buf3[Maxbuf];
-int nbuf3;
+History histories[MaxHistory];
+int nhistory;
 
 Keyboardctl *kc;
 Mousectl *mc;
 
-Rectangle r1, r2, r3;
-Frame f1, f2, f3;
+Rectangle rects[MaxHistory + 1];
+Frame frames[MaxHistory + 1];
 Image *cols[NCOL];
 Image *acme_border;
 Image *acme_back;
@@ -49,61 +54,99 @@ Menu m = {
 	menu
 };
 
+int
+countlines(Rune *b, int n, int w)
+{
+	int nl = 1;
+	int x = 0;
+	int i;
+	Rune rs[2];
+
+	if(w <= 0) return 1;
+	rs[1] = 0;
+	for(i = 0; i < n; i++){
+		if(b[i] == '\n'){
+			nl++;
+			x = 0;
+			continue;
+		}
+		rs[0] = b[i];
+		int lw = runestringsize(font, rs).x;
+		if(x + lw > w){
+			nl++;
+			x = lw;
+		} else {
+			x += lw;
+		}
+	}
+	return nl;
+}
+
 void
 calculaterects(void)
 {
-	int h;
-	Rectangle r;
+	int i, n;
+	int y;
+	int frame_w;
 
-	r = screen->r;
-	h = (r.max.y - r.min.y) / 3;
+	n = nhistory + 1;
+	frame_w = (screen->r.max.x - screen->r.min.x) - (Margin + Border + Padding) * 2;
 
-	r1 = Rect(r.min.x, r.min.y, r.max.x, r.min.y + h);
-	r2 = Rect(r.min.x, r1.max.y, r.max.x, r1.max.y + h);
-	r3 = Rect(r.min.x, r2.max.y, r.max.x, r.max.y);
+	y = screen->r.min.y;
 
-	/* Apply margin */
-	r1 = insetrect(r1, Margin);
-	r2 = insetrect(r2, Margin);
-	r3 = insetrect(r3, Margin);
+	for(i = 0; i < n; i++){
+		int nl;
+		if(i == 0)
+			nl = countlines(buf, nbuf, frame_w);
+		else
+			nl = countlines(histories[i-1].buf, histories[i-1].n, frame_w);
+
+		int h = nl * font->height + (Border + Padding) * 2;
+
+		rects[i] = Rect(screen->r.min.x + Margin, y + Margin, screen->r.max.x - Margin, y + Margin + h);
+		y += h + Margin * 2;
+	}
 }
 
 void
 initframes(void)
 {
+	int i, n;
 	calculaterects();
-	frinit(&f1, insetrect(r1, Border + Padding), font, screen, cols);
-	frinit(&f2, insetrect(r2, Border + Padding), font, screen, cols);
-	frinit(&f3, insetrect(r3, Border + Padding), font, screen, cols);
+	n = nhistory + 1;
+	for(i = 0; i < n; i++){
+		/* Clear old frame content to avoid memory leak */
+		if(frames[i].box != nil)
+			frclear(&frames[i], 0);
+		frinit(&frames[i], insetrect(rects[i], Border + Padding), font, screen, cols);
+	}
 }
 
 void
 redraw(void)
 {
+	int i, n;
 	if(screen == nil)
 		return;
 
+	/* In dynamic mode, we re-init frames to adapt to new rectangles */
+	initframes();
+
 	draw(screen, screen->r, acme_back, nil, ZP);
 
-	/* Draw borders */
-	border(screen, r1, Border, acme_border, ZP);
-	border(screen, r2, Border, acme_border, ZP);
-	border(screen, r3, Border, acme_border, ZP);
+	n = nhistory + 1;
+	for(i = 0; i < n; i++){
+		border(screen, rects[i], Border, acme_border, ZP);
 
-	/* r1: editor */
-	frdelete(&f1, 0, f1.nchars);
-	frinsert(&f1, buf, buf + nbuf, 0);
-	frdrawsel(&f1, frptofchar(&f1, icursor), icursor, icursor, 1);
-
-	/* r2: history 1 */
-	frdelete(&f2, 0, f2.nchars);
-	if(nbuf2 > 0)
-		frinsert(&f2, buf2, buf2 + nbuf2, 0);
-
-	/* r3: history 2 */
-	frdelete(&f3, 0, f3.nchars);
-	if(nbuf3 > 0)
-		frinsert(&f3, buf3, buf3 + nbuf3, 0);
+		if(i == 0){
+			/* Editor */
+			frinsert(&frames[0], buf, buf + nbuf, 0);
+			frdrawsel(&frames[0], frptofchar(&frames[0], icursor), icursor, icursor, 1);
+		} else {
+			/* Histories */
+			frinsert(&frames[i], histories[i-1].buf, histories[i-1].buf + histories[i-1].n, 0);
+		}
+	}
 
 	flushimage(display, 1);
 }
@@ -120,15 +163,21 @@ output(void)
 {
 	int p[2];
 	int pid, wid;
+	int i;
 
 	if(nbuf == 0)
 		return;
 
 	/* shift history */
-	memmove(buf3, buf2, nbuf2 * sizeof(Rune));
-	nbuf3 = nbuf2;
-	memmove(buf2, buf, nbuf * sizeof(Rune));
-	nbuf2 = nbuf;
+	if(nhistory < MaxHistory)
+		nhistory++;
+
+	for(i = nhistory - 1; i > 0; i--){
+		memmove(histories[i].buf, histories[i-1].buf, histories[i-1].n * sizeof(Rune));
+		histories[i].n = histories[i-1].n;
+	}
+	memmove(histories[0].buf, buf, nbuf * sizeof(Rune));
+	histories[0].n = nbuf;
 
 	if(cmdargv == nil || *cmdargv == nil){
 		print("%.*S", nbuf, buf);
@@ -202,7 +251,6 @@ threadmain(int argc, char *argv[])
 	if((mc = initmouse(nil, screen)) == nil)
 		sysfatal("initmouse: %r");
 
-	initframes();
 	redraw();
 
 	enum { AMOUSE, AKBD, ARESIZE, NALT };
@@ -224,8 +272,8 @@ threadmain(int argc, char *argv[])
 		switch(rev){
 		case AMOUSE:
 			if(mc->m.buttons & 1){
-				if(ptinrect(mc->m.xy, r1)){
-					icursor = frcharofpt(&f1, mc->m.xy);
+				if(ptinrect(mc->m.xy, rects[0])){
+					icursor = frcharofpt(&frames[0], mc->m.xy);
 					redraw();
 				}
 			}else if(mc->m.buttons & 4){
@@ -277,6 +325,8 @@ threadmain(int argc, char *argv[])
 				if(icursor < nbuf) icursor++;
 				break;
 			case '\n':
+				if(nbuf == 0)
+					break;
 				if(nbuf < Maxbuf)
 					buf[nbuf++] = '\n';
 				output();
@@ -300,7 +350,6 @@ threadmain(int argc, char *argv[])
 		case ARESIZE:
 			if(getwindow(display, Refnone) < 0)
 				sysfatal("getwindow: %r");
-			initframes();
 			redraw();
 			break;
 		}
